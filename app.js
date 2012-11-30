@@ -42,15 +42,21 @@ app.get('/config-examples/:filename', function (req, res) {
 	});
 });
 
+http.createServer(app).listen(app.get('port'), function () {
+	console.log("Express server listening on port " + app.get('port'));
+});
+
+
 
 (function () {
 	// build script
 	var srcFiles = [
-		'./assets/js/formsEngine/src/header.js',
-		'./assets/js/formsEngine/src/validation.js',
-		'./assets/js/formsEngine/src/namespace.js',
-		'./assets/js/formsEngine/src/fieldTypes.js',
-		'./assets/js/formsEngine/src/core.js'
+		'./assets/js/formsEngine/src/01.header.js',
+		'./assets/js/formsEngine/src/02.chosen.jquery.js',
+		'./assets/js/formsEngine/src/03.validation.js',
+		'./assets/js/formsEngine/src/04.namespace.js',
+		'./assets/js/formsEngine/src/05.fieldTypes.js',
+		'./assets/js/formsEngine/src/06.core.js'
 	];
 	var appendFile = function (files, concatSrc, callback) {
 		var fname = files.shift();
@@ -76,7 +82,31 @@ app.get('/config-examples/:filename', function (req, res) {
 	});
 })();
 
-
-http.createServer(app).listen(app.get('port'), function () {
-	console.log("Express server listening on port " + app.get('port'));
-});
+(function () {
+	// build css
+	var srcFiles = [
+		'./assets/css/formsEngine/src/chosen.css',
+		'./assets/css/formsEngine/src/styles.css'
+	];
+	var appendFile = function (files, concatSrc, callback) {
+		var fname = files.shift();
+		if (fname) {
+			fs.readFile(fname, function (err, data) {
+				if (err) {
+					console.log('err');
+				} else {
+					concatSrc.push(data.toString());
+					appendFile(files, concatSrc, callback);
+				}
+			});
+		} else {
+			callback && callback(concatSrc);
+		}
+	};
+	var concatenated = [];
+	appendFile(srcFiles, concatenated, function (src) {
+		var text = src.join("\n");
+		fs.writeFile('./assets/css/formsEngine/build/formsEngine.css', text);
+		console.log('Successfully built formsEngine.css');
+	});
+})();
