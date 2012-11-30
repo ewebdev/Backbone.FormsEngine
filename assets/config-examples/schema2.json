@@ -1,0 +1,34 @@
+{
+    "fields": [
+        {
+            "name": "password",
+            "type": "Password",
+            "caption": "Choose Password",
+            "description": "At least one digit and one letter",
+            "validation": [
+                {
+                    "minLength": 6,
+                    "msg": "Password must contain at least 6 characters"
+                },
+                {
+                    "pattern": '/[0-9]/ig',
+                    "msg": "Password must contain at least one digit"
+                },
+                {
+                    "pattern": '/[a-zA-Z]/ig'
+                }
+            ]
+        },
+        {
+            "name": "repeatPassword",
+            "type": "Password",
+            "caption": "Retype Password",
+            "description": "Your password, again",
+            "validation": [
+                {
+                    equalTo: 'password'
+                }
+            ]
+        }
+    ]
+}

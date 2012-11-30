@@ -1,0 +1,170 @@
+{
+    "fields": [
+        {
+            "type": "Section",
+            "name": "website",
+            "caption": "Website Details",
+            "items": [
+                {
+                    "name": "url",
+                    "type": "String",
+                    "caption": "Website URL",
+                    "placeholder": "http://yoursite.com",
+                    "description": "Your website URL",
+                    "validation": [
+                        {
+                            "required": true,
+                            "msg": "Please enter an URL"
+                        },
+                        {
+                            "pattern": "url",
+                            "msg": "Please enter a valid URL"
+                        }
+                    ]
+                },
+                {
+                    "name": "type",
+                    "type": "Set",
+                    "multiSelect": false,
+                    "caption": "Type",
+//                    "description": "Where have you been?",
+                    items: [
+                        'blog',
+                        'store',
+                        'personal'
+                    ]
+                },
+                {
+                    "name": "sections",
+                    "type": "Set",
+                    "multiSelect": true,
+                    "caption": "Sections",
+//                    "description": "Where have you been?",
+                    items: [
+                        'about',
+                        'contact',
+                        'register'
+                    ]
+                },
+                {
+                    "name": "language",
+                    "type": "Set",
+                    "multiSelect": false,
+                    "caption": "Primary Language",
+//                    "description": "Where have you been?",
+                    items: [
+                        'Arabic',
+                        'English',
+                        'Hebrew',
+                        'Japanesse',
+                        'Hindu',
+                        'Russian',
+                        'Slovenian',
+                        'Turkish'
+                    ]
+                },
+                {
+                    "name": "description",
+                    "type": "Text",
+                    "caption": "Description",
+                    "placeholder": "Long message...",
+                    "description": "This is a message"
+                },
+                {
+                    "name": "blah",
+                    "type": "Text",
+                    "caption": "Message",
+                    "placeholder": "Long message...",
+                    "description": "This is a message"
+                }
+            ]
+        },
+        {
+            "type": "Section",
+            "name": "security",
+            "caption": "Security",
+            "items": [
+                {
+                    "name": "password",
+                    "type": "Password",
+                    "caption": "Choose Password",
+                    "description": "At least one digit and one letter",
+                    "validation": [
+                        {
+                            "minLength": 6,
+                            "msg": "Password must contain at least 6 characters"
+                        },
+                        {
+                            "pattern": '/[0-9]/ig',
+                            "msg": "Password must contain at least one digit"
+                        },
+                        {
+                            "pattern": '/[a-zA-Z]/ig'
+                        }
+                    ]
+                },
+                {
+                    "name": "repeatPassword",
+                    "type": "Password",
+                    "caption": "Retype Password",
+                    "description": "Your password, again",
+                    "validation": [
+                        {
+                            equalTo: 'security.password'
+                        }
+                    ]
+                },
+                {
+                    "name": "save",
+                    "type": "Boolean",
+                    "caption": "Save",
+                    "description": ""
+                }
+            ]
+        },
+        {
+            "name": "repeatPassword",
+            "type": "String",
+            "caption": "Retype Password",
+            "description": "Your password, again"
+        },
+        {
+            "type": "Composite",
+            "name": "vacations",
+            "caption": "Vacations",
+            "fields": [
+                {
+                    "name": "active",
+                    "type": "Boolean",
+                    "caption": "Approved",
+                    "description": "",
+                    validation: {
+                        acceptance: true
+                    }
+                },
+                {
+                    "name": "country",
+                    "type": "Set",
+//                    "maxSelected": 3,
+                    "multiSelect": true,
+                    "caption": "Countries",
+                    "placeholder": "Countries",
+                    "description": "Where have you been?",
+                    items: [
+                        'Finland',
+                        'Greece',
+                        'Hungary',
+                        'Israel',
+                        'Italy',
+                        'Japan',
+                        'Russia',
+                        'Slovenia',
+                        'Turkey',
+                        'UK',
+                        'USA'
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,128 @@
+{
+    "fields": [
+        {
+            "name": "url",
+            "type": "String",
+            "caption": "URL to Like",
+            "placeholder": "http://yoursite.com",
+            "description": "Your website URL",
+            "validation": [
+                {
+                    "required": true,
+                    "msg": "Please enter an URL"
+                },
+                {
+                    "pattern": "url",
+                    "msg": "Please enter a valid URL"
+                }
+            ]
+        },
+        {
+            "name": "message",
+            "type": "Text",
+            "caption": "Message",
+            "placeholder": "Long message...",
+            "description": "This is a message"
+        },
+        {
+            "name": "blah",
+            "type": "Text",
+            "caption": "Message",
+            "placeholder": "Long message...",
+            "description": "This is a message"
+        },
+        {
+            "name": "compositeTest",
+            "type": "Composite",
+            "caption": "CompositeTest Title",
+            "fields": [
+                {
+                    "name": "allow",
+                    "type": "Boolean",
+                    "caption": "Allow",
+                    "description": "",
+                    validation: {
+                        acceptance: true
+                    }
+                },
+                {
+                    "name": "country",
+                    "type": "Set",
+                    "multiSelect": true,
+                    //            "maxSelected": 1,
+                    "caption": "Countries",
+                    "placeholder": "Countries",
+                    "description": "Choose 2",
+                    items: [
+                        {value: 0, caption: 'Israel'},
+                        {value: 1, caption: 'USA'},
+                        {value: 2, caption: 'France'},
+                        {value: 3, caption: 'Italy'},
+                        {value: 4, caption: 'Israel'},
+                        {value: 5, caption: 'Ireland'},
+                        {value: 6, caption: 'UK'},
+                        {value: 7, caption: 'Germany'},
+                        {value: 8, caption: 'Hungary'},
+                        {value: 9, caption: 'Greece'},
+                        {value: 10, caption: 'Japan'}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "info",
+            "type": "Section",
+            "caption": "Info Section Title",
+            "items": [
+                {
+                    "name": "password",
+                    "type": "Password",
+                    "caption": "Choose Password",
+                    "description": "At least one digit and one letter",
+                    "validation": [
+                        {
+                            "minLength": 6,
+                            "msg": "Password must contain at least 6 characters"
+                        },
+                        {
+                            "pattern": '/[0-9]/ig',
+                            "msg": "Password must contain at least one digit"
+                        },
+                        {
+                            "pattern": '/[a-zA-Z]/ig',
+                            "msg": "Password must contain at least one digit"
+                        }
+                    ]
+                },
+                {
+                    "name": "country",
+                    "type": "Set",
+        //            "multiSelect": true,
+        //            "maxSelected": 1,
+                    "caption": "Countries",
+                    "placeholder": "Countries",
+                    "description": "Choose 2",
+                    items: [
+                        {value: 0, caption: 'Israel'},
+                        {value: 1, caption: 'USA'},
+                        {value: 2, caption: 'France'},
+                        {value: 3, caption: 'Italy'},
+                        {value: 4, caption: 'Israel'},
+                        {value: 5, caption: 'Ireland'},
+                        {value: 6, caption: 'UK'},
+                        {value: 7, caption: 'Germany'},
+                        {value: 8, caption: 'Hungary'},
+                        {value: 9, caption: 'Greece'},
+                        {value: 10, caption: 'Japan'}
+                    ]
+                },
+                {
+                    "name": "allow",
+                    "type": "Boolean",
+                    "caption": "Allow",
+                    "description": ""
+                }
+            ]
+        }
+    ]
+}
