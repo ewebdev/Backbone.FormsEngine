@@ -659,8 +659,11 @@
   text-shadow: 0 1px 0 #f1b6b6, 0 -1px 0 #ffecec;
   box-shadow: 0 1px 0 #FAC3C3;
   width: 295px;
+  top: 5px;
   font-size: 12px;
   cursor: pointer;
+  overflow: visible;
+  z-index: 10;
 }
 .generated-form .field-wrapper .errors-block ul {
   list-style: none;
@@ -673,7 +676,7 @@
   border-width: 4.5px 8px 4.5px 0;
   border-color: transparent #FAC3C3 transparent transparent;
   margin-left: -18px;
-  top: 50%;
+  top: 15px;
   margin-top: -3px;
   position: absolute;
 }

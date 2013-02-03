@@ -5,12 +5,16 @@
   FieldType = FormsEngine.FieldType = Backbone.View.extend({
     initialize: function(options) {
       var ev, rule, validation;
-      this.name = (options.namePrefix ? options.namePrefix + '.' : '') + options.name;
+      this.name = options.name;
+      this.path = options.path;
+      this.rootModel = options.rootModel;
+      this.fullname = options.path ? options.path + '.' + options.name : options.name;
       this.children = [];
       this.form = options.form;
       this.$el.addClass(options.type.toLowerCase() + '-field-wrapper');
       validation = options.validation;
       if (validation) {
+        this.rootModel.on('change:' + this.fullname, this.validate, this);
         this.required = ((function() {
           var _i, _len, _ref, _results;
           _ref = options.validation;
@@ -33,49 +37,52 @@
       ev['keydown ' + this.fieldTagName] = function() {
         var _this = this;
         return setTimeout(function() {
-          if (_this.get()) {
-            return _this.validate();
-          } else {
-            return _this.clearValidation();
-          }
+          return _this.updateFromDOM();
         }, 10);
       };
-      ev[this.changeEventName + ' ' + this.fieldTagName] = this.validate;
+      ev[this.changeEventName + ' ' + this.fieldTagName] = this.updateFromDOM;
       ev['click .errors-block'] = this.clearValidation;
       return this.delegateEvents(ev);
+    },
+    updateFromDOM: function() {
+      return this.rootModel.set(this.fullname, this.get(), {
+        validate: false
+      });
     },
     changeEventName: 'change',
     fieldTagName: 'input',
     className: 'field-wrapper',
     inputType: void 0,
-    template: _.template("<label for=\"<%=cid%>\" class=\"control-label\"><%-options.caption%></label>\n<div class=\"controls\">\n	<%=controlTemplate(this)%>\n</div>\n<span class=\"help-block\"><%-options.description || ''%></span>\n<span class=\"errors-block\" style=\"display: none;\"><div class=\"tip\" ></div><ul><%-options.errors || ''%></ul></span>"),
-    controlTemplate: _.template("<<%-fieldTagName%> id=\"<%=cid%>\" name=\"<%=name%>\"<%=inputType ? ' type=\"' + inputType + '\"' : ''%><%=options.placeholder ? ' placeholder=\"' + options.placeholder + '\"' : ''%> tabindex=\"<%=options.tabindex%>\"></<%-fieldTagName%>"),
+    template: _.template("<label for=\"<%=cid%>\" class=\"control-label\"><%-options.caption%></label>\n<div class=\"controls\">\n<%=controlTemplate(this)%>\n</div>\n<span class=\"help-block\"><%-options.description || ''%></span>\n<span class=\"errors-block\" style=\"display: none;\"><div class=\"tip\" ></div><ul><%-options.errors || ''%></ul></span>"),
+    controlTemplate: _.template("<<%-fieldTagName%> id=\"<%=cid%>\" name=\"<%=fullname%>\"<%=inputType ? ' type=\"' + inputType + '\"' : ''%><%=options.placeholder ? ' placeholder=\"' + options.placeholder + '\"' : ''%> tabindex=\"<%=options.tabindex%>\"></<%-fieldTagName%>>"),
     validate: function() {
-      var err, errors, errs;
-      if (!this.form.data) {
-        this.form.serialize();
-      }
-      errors = Validation.validate(this.name, this.get(), this.options.validation, this.form.data, this.options.caption || this.name);
+      var errors;
+      errors = Validation.validate(this.name, this.get(), this.options.validation, this.rootModel.attributes, this.options.caption || this.name);
+      console.log(errors);
       if (typeof errors === 'string') {
         errors = [errors];
       }
       if ((errors != null) && errors.length) {
-        errs = (function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = errors.length; _i < _len; _i++) {
-            err = errors[_i];
-            _results.push("<li>" + err + "</li>");
-          }
-          return _results;
-        })();
-        this.$('.errors-block ul').html(errs.join('')).parent().show();
-        this.$el.addClass('invalid');
+        this.onInvalid(errors);
         this.hasErrors = true;
       } else if (this.hasErrors) {
         this.clearValidation();
       }
       return errors;
+    },
+    onInvalid: function(errors) {
+      var err, errs;
+      errs = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = errors.length; _i < _len; _i++) {
+          err = errors[_i];
+          _results.push("<li>" + err + "</li>");
+        }
+        return _results;
+      })();
+      this.$('.errors-block ul').html(errs.join('')).parent().show();
+      return this.$el.addClass('invalid');
     },
     clearValidation: function() {
       this.$('.errors-block').hide();
@@ -83,7 +90,7 @@
       return this.hasErrors = false;
     },
     get: function() {
-      return this.$("" + this.fieldTagName + "[name='" + this.name + "']").val();
+      return this.$("" + this.fieldTagName + "[name='" + this.fullname + "']").val();
     },
     serialize: function() {
       var json;
@@ -121,7 +128,7 @@
       return json;
     },
     get: function() {
-      return this.$("" + this.fieldTagName + "[name='" + this.name + "']").prop('checked');
+      return this.$("" + this.fieldTagName + "[name='" + this.fullname + "']").prop('checked');
     }
   });
   fieldTypes.Email = FieldType.extend({
@@ -157,11 +164,11 @@
         return this.$("input:checked").val();
       } else {
         return this.$("input:checked").map(function() {
-          return $(this).val();
-        }).toArray();
+          return $(this).val().toArray();
+        });
       }
     },
-    controlTemplate: _.template("<% if (fieldTagName === 'select') { %>\n	<select name=\"<%=name%>\"<%=options.multiSelect ? ' multiple' : ''%> data-max-selected=\"<%=options.maxSelected === Infinity ? undefined : options.maxSelected%>\" class=\"chzn-select\"<%=options.placeholder ? ' data-placeholder=\"' + options.placeholder + '\"' : ''%> style=\"width:350px;\" tabindex=\"<%=options.tabindex%>\">\n		<% _.each(options.items, function(item){ %>\n		<option value=\"<%-item.value !== undefined ? item.value : item%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></option>\n		<% }); %>\n	</select>\n<% } else if(inputType === 'radio') { %>\n		<div class=\"group\">\n			<% _.each(options.items, function(item, i){ %>\n				<div class=\"option\">\n					<input id=\"radio_<%-cid%>_<%-i%>\" type=\"radio\" name=\"<%=name%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n					<label for=\"radio_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n				</div>\n				<% }); %>\n		</div>\n<% } else { %>\n		<div class=\"group\">\n			<% _.each(options.items, function(item, i){ %>\n				<div class=\"option\">\n					<input id=\"checkbox_<%-cid%>_<%-i%>\" type=\"checkbox\" name=\"<%=name%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n					<label for=\"checkbox_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n				</div>\n			<% }); %>\n		</div>\n<% } %>"),
+    controlTemplate: _.template("<% if (fieldTagName === 'select') { %>\n<select name=\"<%=fullname%>\"<%=options.multiSelect ? ' multiple' : ''%> data-max-selected=\"<%=options.maxSelected === Infinity ? undefined : options.maxSelected%>\" class=\"chzn-select\"<%=options.placeholder ? ' data-placeholder=\"' + options.placeholder + '\"' : ''%> style=\"width:350px;\" tabindex=\"<%=options.tabindex%>\">\n<% _.each(options.items, function(item){ %>\n<option value=\"<%-item.value !== undefined ? item.value : item%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></option>\n<% }); %>\n</select>\n<% } else if(inputType === 'radio') { %>\n<div class=\"group\">\n<% _.each(options.items, function(item, i){ %>\n<div class=\"option\">\n<input id=\"radio_<%-cid%>_<%-i%>\" type=\"radio\" name=\"<%=fullname%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n<label for=\"radio_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n</div>\n<% }); %>\n</div>\n<% } else { %>\n<div class=\"group\">\n<% _.each(options.items, function(item, i){ %>\n<div class=\"option\">\n<input id=\"checkbox_<%-cid%>_<%-i%>\" type=\"checkbox\" name=\"<%=fullname%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n<label for=\"checkbox_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n</div>\n<% }); %>\n</div>\n<% } %>"),
     render: function() {
       this.$el.html(this.template(this));
       this.$content = this.$el;
@@ -182,7 +189,9 @@
   });
   FieldsGroup = Backbone.View.extend({
     initialize: function(options) {
-      this.name = (options.namePrefix ? options.namePrefix + '.' : '') + options.name;
+      this.name = options.name;
+      this.path = options.path;
+      this.fullname = options.path ? options.path + '.' + options.name : options.name;
       this.children = [];
       return this.form = this.options.form;
     },
@@ -206,7 +215,7 @@
   });
   fieldTypes.Section = FieldsGroup.extend({
     className: 'section-wrapper',
-    template: _.template("<% if (options.caption) { %>\n	<div class=\"group-title\"><%-options.caption%></div>\n<% } %>\n<div class=\"group-items\"></div>"),
+    template: _.template("<% if (options.caption) { %>\n<div class=\"group-title\"><%-options.caption%></div>\n<% } %>\n<div class=\"group-items\"></div>"),
     render: function() {
       this.$el.html(this.template(this));
       this.$content = this.$('.group-items');
@@ -231,10 +240,11 @@
   });
   fieldTypes.CompositeChild = FieldsGroup.extend({
     className: 'child-wrapper',
+    path: null,
     events: {
       'click .remove-item-btn': 'removeItem'
     },
-    template: _.template("<% if (options.caption) { %>\n	<h3 class=\"section-title\"><%-options.caption%></h3>\n<% } %>\n<div class=\"composite-fields\"></div>\n<div class=\"composite-controls\">\n	<button type=\"button\" class=\"btn remove-item-btn\"><i class=\"icon-minus\"></i> Remove</button>\n</div>"),
+    template: _.template("<% if (options.caption) { %>\n<h3 class=\"section-title\"><%-options.caption%></h3>\n<% } %>\n<div class=\"composite-fields\"></div>\n<div class=\"composite-controls\">\n<button type=\"button\" class=\"btn remove-item-btn\"><i class=\"icon-minus\"></i> Remove</button>\n</div>"),
     removeItem: function(e) {
       e.preventDefault();
       return this.trigger('doRemove', this);
@@ -306,7 +316,7 @@
       return this.$('.title-status').html(this.titleStatusTemplate(this));
     },
     titleStatusTemplate: _.template("(<%-options.items.length%> items)"),
-    template: _.template("<div class=\"group-title\">\n	<div class=\"title-inner\"><%-options.caption%></div>\n	<div class=\"group-controls\">\n		<button type=\"button\" class=\"btn add-item-btn\"><i class=\"icon-plus\"></i> Add</button>\n		<span class=\"title-status\"><%= titleStatusTemplate(this) %></span>\n		</div>\n</div>\n<div class=\"group-items\"></div>"),
+    template: _.template("<div class=\"group-title\">\n<div class=\"title-inner\"><%-options.caption%></div>\n<div class=\"group-controls\">\n<button type=\"button\" class=\"btn add-item-btn\"><i class=\"icon-plus\"></i> Add</button>\n<span class=\"title-status\"><%= titleStatusTemplate(this) %></span>\n</div>\n</div>\n<div class=\"group-items\"></div>"),
     onRender: function() {
       return this.updateTitle();
     },

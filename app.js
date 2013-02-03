@@ -51,8 +51,10 @@ http.createServer(app).listen(app.get('port'), function () {
 (function () {
 	// build script
 	var srcFiles = [
-		'./assets/js/formsEngine/src/01.header.js',
-		'./assets/js/formsEngine/src/02.chosen.jquery.js',
+        './assets/js/formsEngine/src/00.header.js',
+        './assets/js/formsEngine/src/01.underscore.mixin.deepExtend.js',
+        './assets/js/formsEngine/src/02.chosen.jquery.js',
+        './assets/js/formsEngine/src/02.deep-model.js',
 		'./assets/js/formsEngine/src/03.validation.js',
 		'./assets/js/formsEngine/src/04.namespace.js',
 		'./assets/js/formsEngine/src/05.fieldTypes.js',

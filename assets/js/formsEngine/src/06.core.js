@@ -1,13 +1,24 @@
 
 (function() {
-  var FormView, FormsEngine, buildFields, generateField;
+  var FormModel, FormView, FormsEngine, buildFields, generateField;
   FormsEngine = Backbone.FormsEngine;
+  FormModel = Backbone.DeepModel.extend({
+    validate: function(data, options) {
+      return console.log('model.validate', options.attr, this.get(options.attr));
+    }
+  });
   FormView = Backbone.View.extend({
     initialize: function() {
       this.tabindex = 0;
       this.children = [];
-      return this.on('ready', function() {
+      this.model = new FormModel(null, this.options.schema);
+      this.on('ready', function() {
         return this.ready = true;
+      });
+      return this.on('change', function(e) {
+        return this.model.set(e.changed, e.value, {
+          validate: true
+        });
       });
     },
     tagName: 'form',
@@ -18,6 +29,7 @@
     validate: function(forceRefresh) {
       var j, r, res, view, _ref;
       res = [];
+      forceRefresh = true;
       if (forceRefresh || !this.data) {
         this.serialize();
       }
@@ -37,11 +49,10 @@
     submit: function(e) {
       var errors;
       e.preventDefault();
-      errors = this.validate();
+      errors = this.validate(true);
       if (errors && (errors.length > 1 || errors[0])) {
         if ((typeof console !== "undefined" && console !== null ? console.log : void 0) != null) {
-          console.log('INVALID, Errors:');
-          return console.log(errors);
+          return console.warn('INVALID, Errors:', errors);
         }
       } else {
         return this.options.submit(this.data);
@@ -64,25 +75,26 @@
       return this.data = json;
     }
   });
-  generateField = function(options, tabIdx, namePrefix, form) {
+  generateField = function(options, tabIdx, path, form) {
     var View;
     View = FormsEngine.fieldTypes[options.type];
     options.tabindex = 0;
-    options.namePrefix = namePrefix;
+    options.path = path;
     options.form = form;
+    options.rootModel = form.model;
     if (View) {
       return (new View(options)).render();
     }
     return null;
   };
-  buildFields = FormsEngine.buildFields = function(schema, parent, namePrefix) {
+  buildFields = FormsEngine.buildFields = function(schema, parent, path) {
     var fields, i, v, view;
     fields = (function() {
       var _results;
       _results = [];
       for (i in schema) {
         v = schema[i];
-        view = generateField(v, i + 1, namePrefix, parent.form || parent);
+        view = generateField(v, i + 1, (parent.path ? parent.path + '.' + parent.name : parent.name), parent.form || parent);
         view.$el.appendTo(parent.$content);
         _results.push(parent.children.push(view));
       }
@@ -96,9 +108,9 @@
   return FormsEngine.generate = function(options) {
     var form;
     this.options = options;
-    form = new FormView(this.options).render();
+    form = new FormView(options).render();
     form.$el.appendTo(options.target);
-    buildFields(options.schema, form);
+    buildFields(options.schema, form, '');
     return form;
   };
 })();

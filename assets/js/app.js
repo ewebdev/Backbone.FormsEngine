@@ -11,15 +11,17 @@ $(function(){
 			}
 		});
 
-		var $result = $('#jsonResult');
+		window.form = form;
+
+//		var $result = $('#jsonResult');
 //		form.$el.on('change', 'input, textarea, select, click', function() {
 //			return form.validate(true);
 //		});
-		var update = function(){
-			$result.css('color', form.valid ? '' : 'red');
-			$result.text(JSON.stringify(form.serialize()));
-		};
-		form.on('schemaChanged', update);
+//		var update = function(){
+//			$result.css('color', form.valid ? '' : 'red');
+//			$result.text(JSON.stringify(form.serialize()));
+//		};
+//		form.on('schemaChanged', update);
 //		form.on('validate', update);
 
 	});

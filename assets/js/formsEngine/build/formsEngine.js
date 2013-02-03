@@ -6,6 +6,106 @@
 */
 
 
+(function() {
+  var arrays, basicObjects, deepClone, deepExtend, deepExtendCouple, isBasicObject,
+    __slice = [].slice;
+
+  deepClone = function(obj) {
+    var func, isArr;
+    if (!_.isObject(obj || _.isFunction(obj))) {
+      return obj;
+    }
+    if (_.isDate(obj)) {
+      return new Date(obj.getTime());
+    }
+    if (_.isRegExp(obj)) {
+      return new RegExp(obj.source, obj.toString().replace(/.*\//, ""));
+    }
+    isArr = _.isArray(obj || _.isArguments(obj));
+    func = function(memo, value, key) {
+      if (isArr) {
+        memo.push(deepClone(value));
+      } else {
+        memo[key] = deepClone(value);
+      }
+      return memo;
+    };
+    return _.reduce(obj, func, isArr ? [] : {});
+  };
+
+  isBasicObject = function(object) {
+    return (object.prototype === {}.prototype || object.prototype === Object.prototype) && _.isObject(object) && !_.isArray(object) && !_.isFunction(object) && !_.isDate(object) && !_.isRegExp(object) && !_.isArguments(object);
+  };
+
+  basicObjects = function(object) {
+    return _.filter(_.keys(object), function(key) {
+      return isBasicObject(object[key]);
+    });
+  };
+
+  arrays = function(object) {
+    return _.filter(_.keys(object), function(key) {
+      return _.isArray(object[key]);
+    });
+  };
+
+  deepExtendCouple = function(destination, source, maxDepth) {
+    var combine, recurse, sharedArrayKey, sharedArrayKeys, sharedObjectKey, sharedObjectKeys, _i, _j, _len, _len1;
+    if (maxDepth == null) {
+      maxDepth = 20;
+    }
+    if (maxDepth <= 0) {
+      console.warn('_.deepExtend(): Maximum depth of recursion hit.');
+      return _.extend(destination, source);
+    }
+    sharedObjectKeys = _.intersection(basicObjects(destination), basicObjects(source));
+    recurse = function(key) {
+      return source[key] = deepExtendCouple(destination[key], source[key], maxDepth - 1);
+    };
+    for (_i = 0, _len = sharedObjectKeys.length; _i < _len; _i++) {
+      sharedObjectKey = sharedObjectKeys[_i];
+      recurse(sharedObjectKey);
+    }
+    sharedArrayKeys = _.intersection(arrays(destination), arrays(source));
+    combine = function(key) {
+      return source[key] = _.union(destination[key], source[key]);
+    };
+    for (_j = 0, _len1 = sharedArrayKeys.length; _j < _len1; _j++) {
+      sharedArrayKey = sharedArrayKeys[_j];
+      combine(sharedArrayKey);
+    }
+    return _.extend(destination, source);
+  };
+
+  deepExtend = function() {
+    var finalObj, maxDepth, objects, _i;
+    objects = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), maxDepth = arguments[_i++];
+    if (!_.isNumber(maxDepth)) {
+      objects.push(maxDepth);
+      maxDepth = 20;
+    }
+    if (objects.length <= 1) {
+      return objects[0];
+    }
+    if (maxDepth <= 0) {
+      return _.extend.apply(this, objects);
+    }
+    finalObj = objects.shift();
+    while (objects.length > 0) {
+      finalObj = deepExtendCouple(finalObj, deepClone(objects.shift()), maxDepth);
+    }
+    return finalObj;
+  };
+
+  _.mixin({
+    deepClone: deepClone,
+    isBasicObject: isBasicObject,
+    basicObjects: basicObjects,
+    arrays: arrays,
+    deepExtend: deepExtend
+  });
+
+}).call(this);
 // Chosen, a Select Box Enhancer for jQuery and Protoype
 // by Patrick Filler for Harvest, http://getharvest.com
 // 
@@ -1025,6 +1125,345 @@ Copyright (c) 2011 by Harvest
 
 }).call(this);
 
+/*jshint expr:true eqnull:true */
+/**
+ *
+ * Improves Backbone Model support when nested attributes are used.
+ * get() and set() can take paths e.g. 'user.name'
+ *
+ *
+ */
+;(function(factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD
+        define(['underscore', 'backbone'], factory);
+    } else {
+        // globals
+        factory(_, Backbone);
+    }
+}(function(_, Backbone) {
+    
+    /**
+     * Takes a nested object and returns a shallow object keyed with the path names
+     * e.g. { "level1.level2": "value" }
+     *
+     * @param  {Object}      Nested object e.g. { level1: { level2: 'value' } }
+     * @return {Object}      Shallow object with path names e.g. { 'level1.level2': 'value' }
+     */
+    function objToPaths(obj) {
+        var ret = {},
+            separator = DeepModel.keyPathSeparator;
+
+        for (var key in obj) {
+            var val = obj[key];
+
+            if (val && val.constructor === Object && !_.isEmpty(val)) {
+                //Recursion for embedded objects
+                var obj2 = objToPaths(val);
+
+                for (var key2 in obj2) {
+                    var val2 = obj2[key2];
+
+                    ret[key + separator + key2] = val2;
+                }
+            } else {
+                ret[key] = val;
+            }
+        }
+
+        return ret;
+    }
+
+    /**
+     * @param {Object}  Object to fetch attribute from
+     * @param {String}  Object path e.g. 'user.name'
+     * @return {Mixed}
+     */
+    function getNested(obj, path, return_exists) {
+        var separator = DeepModel.keyPathSeparator;
+
+        var fields = path.split(separator);
+        var result = obj;
+        return_exists || (return_exists === false);
+        for (var i = 0, n = fields.length; i < n; i++) {
+            if (return_exists && !_.has(result, fields[i])) {
+                return false;
+            }
+            result = result[fields[i]];
+
+            if (result == null && i < n - 1) {
+                result = {};
+            }
+            
+            if (typeof result === 'undefined') {
+                if (return_exists)
+                {
+                    return true;
+                }
+                return result;
+            }
+        }
+        if (return_exists)
+        {
+            return true;
+        }
+        return result;
+    }
+
+    /**
+     * @param {Object} obj                Object to fetch attribute from
+     * @param {String} path               Object path e.g. 'user.name'
+     * @param {Object} [options]          Options
+     * @param {Boolean} [options.unset]   Whether to delete the value
+     * @param {Mixed}                     Value to set
+     */
+    function setNested(obj, path, val, options) {
+        options = options || {};
+
+        var separator = DeepModel.keyPathSeparator;
+
+        var fields = path.split(separator);
+        var result = obj;
+        for (var i = 0, n = fields.length; i < n && result !== undefined ; i++) {
+            var field = fields[i];
+
+            //If the last in the path, set the value
+            if (i === n - 1) {
+                options.unset ? delete result[field] : result[field] = val;
+            } else {
+                //Create the child object if it doesn't exist, or isn't an object
+                if (typeof result[field] === 'undefined' || ! _.isObject(result[field])) {
+                    result[field] = {};
+                }
+
+                //Move onto the next part of the path
+                result = result[field];
+            }
+        }
+    }
+
+    function deleteNested(obj, path) {
+      setNested(obj, path, null, { unset: true });
+    }
+
+    var DeepModel = Backbone.Model.extend({
+
+        // Override constructor
+        // Support having nested defaults by using _.deepExtend instead of _.extend
+        constructor: function(attributes, options) {
+            var defaults;
+            var attrs = attributes || {};
+            this.cid = _.uniqueId('c');
+            this.changed = {};
+            this.attributes = {};
+            this._changes = [];
+            if (options && options.collection) this.collection = options.collection;
+            if (options && options.parse) attrs = this.parse(attrs);
+            if (defaults = _.result(this, 'defaults')) {
+                //<custom code>
+                // Replaced the call to _.defaults with _.deepExtend.
+                attrs = _.deepExtend({}, defaults, attributes);
+                //</custom code>
+            }
+            this.set(attrs, {silent: true});
+            //<custom code>
+            // Replaced call to _.clone with _.deepClone
+            this._currentAttributes = _.deepClone(this.attributes);
+            this._previousAttributes = _.deepClone(this.attributes);
+            //</custom code>
+            this.initialize.apply(this, arguments);
+        },
+
+        // Return a copy of the model's `attributes` object.
+        toJSON: function(options) {
+          return _.deepClone(this.attributes);
+        },
+
+        // Clear all attributes on the model, firing `"change"` unless you choose
+        // to silence it.
+        clear: function(options) {
+          var attrs = {};
+          var shallowAttributes = objToPaths(this.attributes);
+          for (var key in shallowAttributes) attrs[key] = void 0;
+          return this.set(attrs, _.extend({}, options, {unset: true}));
+        },
+
+        // Override get
+        // Supports nested attributes via the syntax 'obj.attr' e.g. 'author.user.name'
+        get: function(attr) {
+            return getNested(this.attributes, attr);
+        },
+
+        // Override set
+        // Supports nested attributes via the syntax 'obj.attr' e.g. 'author.user.name'
+        set: function(key, val, options) {
+            var attr, attrs;
+            if (key == null) return this;
+            
+            // Handle both `"key", value` and `{key: value}` -style arguments.
+            if (_.isObject(key)) {
+              attrs = key;
+              options = val;
+            } else {
+              (attrs = {})[key] = val;
+            }
+
+            // Extract attributes and options.
+            var silent = options && options.silent;
+            var unset = options && options.unset;
+            
+            // Run validation.
+            if (!this._validate(attrs, options)) return false;
+
+            // Check for changes of `id`.
+            if (this.idAttribute in attrs) this.id = attrs[this.idAttribute];
+
+            var now = this.attributes;
+
+            //<custom code>
+            attrs = objToPaths(attrs);
+            //</custom code>
+
+            // For each `set` attribute...
+            for (attr in attrs) {
+              val = attrs[attr];
+
+              // Update or delete the current value.
+              //<custom code>
+              unset ? deleteNested(now, attr) : setNested(now, attr, val);
+              //</custom code>
+              this._changes.push(attr, val);
+            }
+
+            // Signal that the model's state has potentially changed, and we need
+            // to recompute the actual changes.
+            this._hasComputed = false;
+
+            // Fire the `"change"` events.
+            if (!silent) this.change(options);
+            return this;
+        },
+
+        // Looking at the built up list of `set` attribute changes, compute how
+        // many of the attributes have actually changed. If `loud`, return a
+        // boiled-down list of only the real changes.
+        _computeChanges: function(loud) {
+          this.changed = {};
+          var already = {};
+          var triggers = [];
+          var current = this._currentAttributes;
+          var changes = this._changes;
+
+          // Loop through the current queue of potential model changes.
+          for (var i = changes.length - 2; i >= 0; i -= 2) {
+            var key = changes[i], val = changes[i + 1];
+            if (already[key]) continue;
+            already[key] = true;
+
+            // Check if the attribute has been modified since the last change,
+            // and update `this.changed` accordingly. If we're inside of a `change`
+            // call, also add a trigger to the list.
+            //<custom code>
+            if (getNested(current, key) !== val) {
+
+              this.changed[key] = val;
+              if (!loud) continue;
+
+              setNested(current, key, val);
+
+              var separator = DeepModel.keyPathSeparator;
+              var fields = key.split(separator);
+              for(var n = 1; n < fields.length; n++) {
+                var parentkey = _.first(fields, n).join(separator);
+
+                if (already[parentkey]) continue;
+                already[parentkey] = true;
+
+                var parentval = getNested(current, parentkey);
+                parentkey += separator + '*';
+                triggers.push(parentkey, parentval);
+              }
+              triggers.push(key, val);
+            }
+            //</custom code>
+          }
+          if (loud) this._changes = [];
+
+          // Signals `this.changed` is current to prevent duplicate calls from `this.hasChanged`.
+          this._hasComputed = true;
+          return triggers;
+        },
+
+        // Call this method to manually fire a `"change"` event for this model and
+        // a `"change:attribute"` event for each changed attribute.
+        // Calling this will cause all objects observing the model to update.
+        change: function(options) {
+          var changing = this._changing;
+          this._changing = true;
+
+          // Generate the changes to be triggered on the model.
+          var triggers = this._computeChanges(true);
+
+          this._pending = !!triggers.length;
+
+          for (var i = triggers.length - 2; i >= 0; i -= 2) {
+            this.trigger('change:' + triggers[i], this, triggers[i + 1], options);
+          }
+
+          if (changing) return this;
+
+          // Trigger a `change` while there have been changes.
+          while (this._pending) {
+            this._pending = false;
+            this.trigger('change', this, options);
+            //<custom code>
+            this._previousAttributes = _.deepClone(this.attributes);
+            //</custom code>
+          }
+
+          this._changing = false;
+          //<custom code>
+          this.changed = false;
+          //</custom code>
+          return this;
+        },
+
+        // Return an object containing all the attributes that have changed, or
+        // false if there are no changed attributes. Useful for determining what
+        // parts of a view need to be updated and/or what attributes need to be
+        // persisted to the server. Unset attributes will be set to undefined.
+        // You can also pass an attributes object to diff against the model,
+        // determining if there *would be* a change.
+        changedAttributes: function(diff) {
+          if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
+          //<custom code>
+          diff = objToPaths(diff);
+          var old = objToPaths(this._previousAttributes);
+          //</custom code>
+          var val, changed = false;
+          for (var attr in diff) {
+            if (_.isEqual(old[attr], (val = diff[attr]))) continue;
+            (changed || (changed = {}))[attr] = val;
+          }
+          return changed;
+        }
+    });
+
+
+    //Config; override in your app to customise
+    DeepModel.keyPathSeparator = '.';
+
+
+    //Exports
+    Backbone.DeepModel = DeepModel;
+
+    //For use in NodeJS
+    if (typeof module != 'undefined') module.exports = DeepModel;
+    
+    return Backbone;
+
+}));
+
 // Validation part was forked from Backbone.Validation
 
 // Default options
@@ -1381,19 +1820,6 @@ var defaultValidators = Validation.validators = (function () {
 }());
 
 
-_.extend(Backbone.Events, {
-  once: function(ev, callback, context) {
-    var bindCallback;
-    bindCallback = _.bind(function() {
-      this.unbind(ev, bindCallback);
-      return callback.apply(context || this, arguments);
-    }, this);
-    return this.bind(ev, bindCallback);
-  }
-});
-
-Backbone.View.prototype.once = Backbone.Model.prototype.once = Backbone.Events.once;
-
 Backbone.FormsEngine = {};
 
 
@@ -1403,12 +1829,16 @@ Backbone.FormsEngine = {};
   FieldType = FormsEngine.FieldType = Backbone.View.extend({
     initialize: function(options) {
       var ev, rule, validation;
-      this.name = (options.namePrefix ? options.namePrefix + '.' : '') + options.name;
+      this.name = options.name;
+      this.path = options.path;
+      this.rootModel = options.rootModel;
+      this.fullname = options.path ? options.path + '.' + options.name : options.name;
       this.children = [];
       this.form = options.form;
       this.$el.addClass(options.type.toLowerCase() + '-field-wrapper');
       validation = options.validation;
       if (validation) {
+        this.rootModel.on('change:' + this.fullname, this.validate, this);
         this.required = ((function() {
           var _i, _len, _ref, _results;
           _ref = options.validation;
@@ -1431,49 +1861,52 @@ Backbone.FormsEngine = {};
       ev['keydown ' + this.fieldTagName] = function() {
         var _this = this;
         return setTimeout(function() {
-          if (_this.get()) {
-            return _this.validate();
-          } else {
-            return _this.clearValidation();
-          }
+          return _this.updateFromDOM();
         }, 10);
       };
-      ev[this.changeEventName + ' ' + this.fieldTagName] = this.validate;
+      ev[this.changeEventName + ' ' + this.fieldTagName] = this.updateFromDOM;
       ev['click .errors-block'] = this.clearValidation;
       return this.delegateEvents(ev);
+    },
+    updateFromDOM: function() {
+      return this.rootModel.set(this.fullname, this.get(), {
+        validate: false
+      });
     },
     changeEventName: 'change',
     fieldTagName: 'input',
     className: 'field-wrapper',
     inputType: void 0,
-    template: _.template("<label for=\"<%=cid%>\" class=\"control-label\"><%-options.caption%></label>\n<div class=\"controls\">\n	<%=controlTemplate(this)%>\n</div>\n<span class=\"help-block\"><%-options.description || ''%></span>\n<span class=\"errors-block\" style=\"display: none;\"><div class=\"tip\" ></div><ul><%-options.errors || ''%></ul></span>"),
-    controlTemplate: _.template("<<%-fieldTagName%> id=\"<%=cid%>\" name=\"<%=name%>\"<%=inputType ? ' type=\"' + inputType + '\"' : ''%><%=options.placeholder ? ' placeholder=\"' + options.placeholder + '\"' : ''%> tabindex=\"<%=options.tabindex%>\"></<%-fieldTagName%>"),
+    template: _.template("<label for=\"<%=cid%>\" class=\"control-label\"><%-options.caption%></label>\n<div class=\"controls\">\n<%=controlTemplate(this)%>\n</div>\n<span class=\"help-block\"><%-options.description || ''%></span>\n<span class=\"errors-block\" style=\"display: none;\"><div class=\"tip\" ></div><ul><%-options.errors || ''%></ul></span>"),
+    controlTemplate: _.template("<<%-fieldTagName%> id=\"<%=cid%>\" name=\"<%=fullname%>\"<%=inputType ? ' type=\"' + inputType + '\"' : ''%><%=options.placeholder ? ' placeholder=\"' + options.placeholder + '\"' : ''%> tabindex=\"<%=options.tabindex%>\"></<%-fieldTagName%>>"),
     validate: function() {
-      var err, errors, errs;
-      if (!this.form.data) {
-        this.form.serialize();
-      }
-      errors = Validation.validate(this.name, this.get(), this.options.validation, this.form.data, this.options.caption || this.name);
+      var errors;
+      errors = Validation.validate(this.name, this.get(), this.options.validation, this.rootModel.attributes, this.options.caption || this.name);
+      console.log(errors);
       if (typeof errors === 'string') {
         errors = [errors];
       }
       if ((errors != null) && errors.length) {
-        errs = (function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = errors.length; _i < _len; _i++) {
-            err = errors[_i];
-            _results.push("<li>" + err + "</li>");
-          }
-          return _results;
-        })();
-        this.$('.errors-block ul').html(errs.join('')).parent().show();
-        this.$el.addClass('invalid');
+        this.onInvalid(errors);
         this.hasErrors = true;
       } else if (this.hasErrors) {
         this.clearValidation();
       }
       return errors;
+    },
+    onInvalid: function(errors) {
+      var err, errs;
+      errs = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = errors.length; _i < _len; _i++) {
+          err = errors[_i];
+          _results.push("<li>" + err + "</li>");
+        }
+        return _results;
+      })();
+      this.$('.errors-block ul').html(errs.join('')).parent().show();
+      return this.$el.addClass('invalid');
     },
     clearValidation: function() {
       this.$('.errors-block').hide();
@@ -1481,7 +1914,7 @@ Backbone.FormsEngine = {};
       return this.hasErrors = false;
     },
     get: function() {
-      return this.$("" + this.fieldTagName + "[name='" + this.name + "']").val();
+      return this.$("" + this.fieldTagName + "[name='" + this.fullname + "']").val();
     },
     serialize: function() {
       var json;
@@ -1519,7 +1952,7 @@ Backbone.FormsEngine = {};
       return json;
     },
     get: function() {
-      return this.$("" + this.fieldTagName + "[name='" + this.name + "']").prop('checked');
+      return this.$("" + this.fieldTagName + "[name='" + this.fullname + "']").prop('checked');
     }
   });
   fieldTypes.Email = FieldType.extend({
@@ -1555,11 +1988,11 @@ Backbone.FormsEngine = {};
         return this.$("input:checked").val();
       } else {
         return this.$("input:checked").map(function() {
-          return $(this).val();
-        }).toArray();
+          return $(this).val().toArray();
+        });
       }
     },
-    controlTemplate: _.template("<% if (fieldTagName === 'select') { %>\n	<select name=\"<%=name%>\"<%=options.multiSelect ? ' multiple' : ''%> data-max-selected=\"<%=options.maxSelected === Infinity ? undefined : options.maxSelected%>\" class=\"chzn-select\"<%=options.placeholder ? ' data-placeholder=\"' + options.placeholder + '\"' : ''%> style=\"width:350px;\" tabindex=\"<%=options.tabindex%>\">\n		<% _.each(options.items, function(item){ %>\n		<option value=\"<%-item.value !== undefined ? item.value : item%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></option>\n		<% }); %>\n	</select>\n<% } else if(inputType === 'radio') { %>\n		<div class=\"group\">\n			<% _.each(options.items, function(item, i){ %>\n				<div class=\"option\">\n					<input id=\"radio_<%-cid%>_<%-i%>\" type=\"radio\" name=\"<%=name%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n					<label for=\"radio_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n				</div>\n				<% }); %>\n		</div>\n<% } else { %>\n		<div class=\"group\">\n			<% _.each(options.items, function(item, i){ %>\n				<div class=\"option\">\n					<input id=\"checkbox_<%-cid%>_<%-i%>\" type=\"checkbox\" name=\"<%=name%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n					<label for=\"checkbox_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n				</div>\n			<% }); %>\n		</div>\n<% } %>"),
+    controlTemplate: _.template("<% if (fieldTagName === 'select') { %>\n<select name=\"<%=fullname%>\"<%=options.multiSelect ? ' multiple' : ''%> data-max-selected=\"<%=options.maxSelected === Infinity ? undefined : options.maxSelected%>\" class=\"chzn-select\"<%=options.placeholder ? ' data-placeholder=\"' + options.placeholder + '\"' : ''%> style=\"width:350px;\" tabindex=\"<%=options.tabindex%>\">\n<% _.each(options.items, function(item){ %>\n<option value=\"<%-item.value !== undefined ? item.value : item%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></option>\n<% }); %>\n</select>\n<% } else if(inputType === 'radio') { %>\n<div class=\"group\">\n<% _.each(options.items, function(item, i){ %>\n<div class=\"option\">\n<input id=\"radio_<%-cid%>_<%-i%>\" type=\"radio\" name=\"<%=fullname%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n<label for=\"radio_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n</div>\n<% }); %>\n</div>\n<% } else { %>\n<div class=\"group\">\n<% _.each(options.items, function(item, i){ %>\n<div class=\"option\">\n<input id=\"checkbox_<%-cid%>_<%-i%>\" type=\"checkbox\" name=\"<%=fullname%>\" value=\"<%-item.value !== undefined ? item.value : item%>\" tabindex=\"<%=options.tabindex%>\" />\n<label for=\"checkbox_<%-cid%>_<%-i%>\"><%-item.caption !== undefined ? item.caption : item.value || item%></label>\n</div>\n<% }); %>\n</div>\n<% } %>"),
     render: function() {
       this.$el.html(this.template(this));
       this.$content = this.$el;
@@ -1580,7 +2013,9 @@ Backbone.FormsEngine = {};
   });
   FieldsGroup = Backbone.View.extend({
     initialize: function(options) {
-      this.name = (options.namePrefix ? options.namePrefix + '.' : '') + options.name;
+      this.name = options.name;
+      this.path = options.path;
+      this.fullname = options.path ? options.path + '.' + options.name : options.name;
       this.children = [];
       return this.form = this.options.form;
     },
@@ -1604,7 +2039,7 @@ Backbone.FormsEngine = {};
   });
   fieldTypes.Section = FieldsGroup.extend({
     className: 'section-wrapper',
-    template: _.template("<% if (options.caption) { %>\n	<div class=\"group-title\"><%-options.caption%></div>\n<% } %>\n<div class=\"group-items\"></div>"),
+    template: _.template("<% if (options.caption) { %>\n<div class=\"group-title\"><%-options.caption%></div>\n<% } %>\n<div class=\"group-items\"></div>"),
     render: function() {
       this.$el.html(this.template(this));
       this.$content = this.$('.group-items');
@@ -1629,10 +2064,11 @@ Backbone.FormsEngine = {};
   });
   fieldTypes.CompositeChild = FieldsGroup.extend({
     className: 'child-wrapper',
+    path: null,
     events: {
       'click .remove-item-btn': 'removeItem'
     },
-    template: _.template("<% if (options.caption) { %>\n	<h3 class=\"section-title\"><%-options.caption%></h3>\n<% } %>\n<div class=\"composite-fields\"></div>\n<div class=\"composite-controls\">\n	<button type=\"button\" class=\"btn remove-item-btn\"><i class=\"icon-minus\"></i> Remove</button>\n</div>"),
+    template: _.template("<% if (options.caption) { %>\n<h3 class=\"section-title\"><%-options.caption%></h3>\n<% } %>\n<div class=\"composite-fields\"></div>\n<div class=\"composite-controls\">\n<button type=\"button\" class=\"btn remove-item-btn\"><i class=\"icon-minus\"></i> Remove</button>\n</div>"),
     removeItem: function(e) {
       e.preventDefault();
       return this.trigger('doRemove', this);
@@ -1704,7 +2140,7 @@ Backbone.FormsEngine = {};
       return this.$('.title-status').html(this.titleStatusTemplate(this));
     },
     titleStatusTemplate: _.template("(<%-options.items.length%> items)"),
-    template: _.template("<div class=\"group-title\">\n	<div class=\"title-inner\"><%-options.caption%></div>\n	<div class=\"group-controls\">\n		<button type=\"button\" class=\"btn add-item-btn\"><i class=\"icon-plus\"></i> Add</button>\n		<span class=\"title-status\"><%= titleStatusTemplate(this) %></span>\n		</div>\n</div>\n<div class=\"group-items\"></div>"),
+    template: _.template("<div class=\"group-title\">\n<div class=\"title-inner\"><%-options.caption%></div>\n<div class=\"group-controls\">\n<button type=\"button\" class=\"btn add-item-btn\"><i class=\"icon-plus\"></i> Add</button>\n<span class=\"title-status\"><%= titleStatusTemplate(this) %></span>\n</div>\n</div>\n<div class=\"group-items\"></div>"),
     onRender: function() {
       return this.updateTitle();
     },
@@ -1734,14 +2170,25 @@ Backbone.FormsEngine = {};
 
 
 (function() {
-  var FormView, FormsEngine, buildFields, generateField;
+  var FormModel, FormView, FormsEngine, buildFields, generateField;
   FormsEngine = Backbone.FormsEngine;
+  FormModel = Backbone.DeepModel.extend({
+    validate: function(data, options) {
+      return console.log('model.validate', options.attr, this.get(options.attr));
+    }
+  });
   FormView = Backbone.View.extend({
     initialize: function() {
       this.tabindex = 0;
       this.children = [];
-      return this.on('ready', function() {
+      this.model = new FormModel(null, this.options.schema);
+      this.on('ready', function() {
         return this.ready = true;
+      });
+      return this.on('change', function(e) {
+        return this.model.set(e.changed, e.value, {
+          validate: true
+        });
       });
     },
     tagName: 'form',
@@ -1752,6 +2199,7 @@ Backbone.FormsEngine = {};
     validate: function(forceRefresh) {
       var j, r, res, view, _ref;
       res = [];
+      forceRefresh = true;
       if (forceRefresh || !this.data) {
         this.serialize();
       }
@@ -1771,11 +2219,10 @@ Backbone.FormsEngine = {};
     submit: function(e) {
       var errors;
       e.preventDefault();
-      errors = this.validate();
+      errors = this.validate(true);
       if (errors && (errors.length > 1 || errors[0])) {
         if ((typeof console !== "undefined" && console !== null ? console.log : void 0) != null) {
-          console.log('INVALID, Errors:');
-          return console.log(errors);
+          return console.warn('INVALID, Errors:', errors);
         }
       } else {
         return this.options.submit(this.data);
@@ -1798,25 +2245,26 @@ Backbone.FormsEngine = {};
       return this.data = json;
     }
   });
-  generateField = function(options, tabIdx, namePrefix, form) {
+  generateField = function(options, tabIdx, path, form) {
     var View;
     View = FormsEngine.fieldTypes[options.type];
     options.tabindex = 0;
-    options.namePrefix = namePrefix;
+    options.path = path;
     options.form = form;
+    options.rootModel = form.model;
     if (View) {
       return (new View(options)).render();
     }
     return null;
   };
-  buildFields = FormsEngine.buildFields = function(schema, parent, namePrefix) {
+  buildFields = FormsEngine.buildFields = function(schema, parent, path) {
     var fields, i, v, view;
     fields = (function() {
       var _results;
       _results = [];
       for (i in schema) {
         v = schema[i];
-        view = generateField(v, i + 1, namePrefix, parent.form || parent);
+        view = generateField(v, i + 1, (parent.path ? parent.path + '.' + parent.name : parent.name), parent.form || parent);
         view.$el.appendTo(parent.$content);
         _results.push(parent.children.push(view));
       }
@@ -1830,9 +2278,9 @@ Backbone.FormsEngine = {};
   return FormsEngine.generate = function(options) {
     var form;
     this.options = options;
-    form = new FormView(this.options).render();
+    form = new FormView(options).render();
     form.$el.appendTo(options.target);
-    buildFields(options.schema, form);
+    buildFields(options.schema, form, '');
     return form;
   };
 })();

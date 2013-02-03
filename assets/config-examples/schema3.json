@@ -1,4 +1,9 @@
 {
+    "name": "Sample App",
+    "version": "0.1",
+    "description": "Replaces normal alert dialog with new stylish looking dialog that does not steal focus from other pages.",
+    "src": "index.js",
+
     "fields": [
         {
             "type": "Section",
@@ -123,18 +128,12 @@
             ]
         },
         {
-            "name": "repeatPassword",
-            "type": "String",
-            "caption": "Retype Password",
-            "description": "Your password, again"
-        },
-        {
             "type": "Composite",
             "name": "vacations",
             "caption": "Vacations",
             "fields": [
                 {
-                    "name": "active",
+                    "name": "approved",
                     "type": "Boolean",
                     "caption": "Approved",
                     "description": "",

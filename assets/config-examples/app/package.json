@@ -1,0 +1,61 @@
+{
+	"name": "Sample App",
+	"version": "0.1",
+	"description": "Replaces normal alert dialog with new stylish looking dialog that does not steal focus from other pages.",
+	"src": "index.js",
+	"dependencies": {
+		"jquery": "1.8.2"
+	},
+	"fields": [
+		{
+			"name": "targetSelector",
+			"type": "String",
+			"caption": "Target Element Selector",
+			"placeholder": "#main",
+			"description": "Where do you want to render the widget?"
+		},
+		{
+			"name": "title",
+			"type": "Section",
+			"caption": "Title",
+			"items": [
+				{
+					"name": "text",
+					"type": "String",
+					"caption": "Text",
+					"placeholder": "Hello world",
+					"description": "The title content",
+					"validation": [
+						{
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "color",
+					"type": "String",
+					"caption": "Text",
+					"placeholder": "#FF00FF",
+					"description": "The font color",
+					"validation": [
+						{
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "bgColor",
+					"type": "String",
+					"caption": "Text",
+					"placeholder": "#CCCCCC",
+					"description": "The background color",
+					"validation": [
+						{
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
